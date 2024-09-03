@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        nav{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 50px;
+            border: 1px solid;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <h3>LOGO</h3>
+        <div>
+          <button id="logoutUser">Logout</button>
+        </div>
+      </nav>
+      <div id="myScreen"></div>
+      <hr>
+      <input type="text" placeholder="Type message" id="userMsg">
+      <button id="sendMessage">Send</button>
+      <div id="chatScreen"></div>
+      <hr>
+
+
+      <h4>Add Music</h4>
+      <input type="text" placeholder="Title" id="m_title"><br>
+      <input type="text" placeholder="Artiste" id="m_artiste"><br>
+      <input type="text" placeholder="Duration" id="m_duration"><br>
+      <label for="">Upload cover image</label><br>
+      <input type="file" id="m_coverPics"><br>
+      <label for="">Upload Music</label>
+        <input type="file" id="musicFile"><br>
+        <button id="addMusic">Add</button>
+
+
+
+
+
+      <script type="module">
+        // Import
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+        import { getStorage, ref as audioRef, uploadBytesResumable  } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js";
+        
+
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyBcsKZvJZcbL2il8x6KZIie39BSglq3GRo",
+          authDomain: "mayfirebase-544bd.firebaseapp.com",
+          projectId: "mayfirebase-544bd",
+          storageBucket: "mayfirebase-544bd.appspot.com",
+          messagingSenderId: "921574315588",
+          appId: "1:921574315588:web:88d1688ebfb44a8b900e11",
+          databaseURL: "https://mayfirebase-544bd-default-rtdb.firebaseio.com",
+        };
+      
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth();
+        const database = getDatabase(app);
+        const storage = getStorage();
+        let chatIndex = 0
+        let musicIndex = 0
+        
+
+        onAuthStateChanged(auth, (user) => {
+            
+            if (user){
+                console.log("User is logged in");
+                myScreen.innerHTML = `
+                    <p>Welcome ${user.displayName}👍</p>
+                `
+            }else{
+                console.log("User is not logged in");
+                window.location.href = 'signup.html'
+            }
+        })
+
+        logoutUser.addEventListener('click', ()=>{
+            signOut(auth)
+            .then(()=>{
+                console.log("User logged out");
+            })
+            .catch((err)=>{
+                console.log(err);
+            })
+        })
+
+
+        // Sending user message
+        sendMessage.addEventListener('click',()=>{
+           let userChat = {
+            message: userMsg.value,
+            sender: auth.currentUser.displayName,
+            time: new Date().toLocaleTimeString()
+           }
+
+           let chatRef = ref(database, `userChat/${chatIndex}`)
+           set(chatRef, userChat)
+           console.log('Message sent');
+           userMsg.value=''
+        })
+
+
+        // retrieving all messages
+        let chatRef = ref(database, `userChat`)
+        onValue(chatRef, (snapshot) => { 
+            chatScreen.innerHTML = ''           
+            let data = snapshot.val()
+            console.log(data);
+            if (data){
+
+                chatIndex = data.length
+                data.forEach((val)=>{
+                    chatScreen.innerHTML += `
+                    <div>
+                    <h4>${val.message}</h4>
+                    <p>${val.sender}</p>
+                    <i>${val.time}</i>
+                    </div>
+                `
+                })
+            }else{
+                chatScreen.innerHTML = 'No chat available'
+            }
+            
+        })  
+
+
+
+        // cloud Storage
+        addMusic.addEventListener('click', ()=>{
+            let cover_file = m_coverPics.files
+            cover_file = cover_file[0]
+
+            let music_file = musicFile.files
+            music_file = music_file[0]
+            
+            
+            let music = {
+                title: m_title.value,
+                artiste: m_artiste.value,
+                duration: m_duration.value,
+                coverImage: cover_file.name,
+                musicFile: music_file.name
+
+            }
+            console.log(music); 
+
+            // Add music to database
+            let musicRef = ref(database, `allmusics/${musicIndex}`)
+            set(musicRef, music)
+            console.log('Music added');
+
+            // add music to cloud storage
+
+            let musicStrRef = audioRef(storage, `allmusics/${music_file.name}`)
+            let uploadTask = uploadBytesResumable(musicStrRef, music_file)
+
+            // upload monitoring
+            uploadTask.on('state_changed', (snapshot)=>{
+                let progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                console.log('Upload is ' + progress + '% done');
+            })
+
+
+            // add musicCover to cloud storage
+            let musicCoverStrRef = audioRef(storage, `allcover/${cover_file.name}`)
+            let uploadCoverTask = uploadBytesResumable(musicCoverStrRef, cover_file)
+
+            // Upload monitoring
+            uploadCoverTask.on('state_changed', (snapshot)=>{
+                let progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                console.log('Upload is ' + progress + '% done');
+            })
+            
+        })
+
+
+        // retrieve music in database
+        let musicRef = ref(database, `allmusics`)
+        onValue(musicRef, (snapshot)=>{
+            let data = snapshot.val()
+            if (data){
+                musicIndex = data.length
+            }
+        })
+
+      </script>
+</body>
+</html>
