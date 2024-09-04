@@ -4,32 +4,50 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Document</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+      crossorigin="anonymous"
+    />
+
     <style>
-      nav {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 10px 50px;
-        border: 1px solid;
-      }
-    </style>
+        nav {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 10px 50px;
+          border: 1px solid;
+        }
+      </style>
   </head>
+
   <body>
     <nav>
       <h3>LOGO</h3>
       <div>
+        <a href="./showMusic.html" class="btn btn-primary">Show Musics</a>
         <button id="logoutUser">Logout</button>
       </div>
     </nav>
+    <hr>
     <div id="myScreen"></div>
-    <hr />
-    <input type="text" placeholder="Type message" id="userMsg" />
-    <button id="sendMessage">Send</button>
-    <div id="chatScreen"></div>
-    <hr />
+    <hr>
+    <form action="" class="col-10 col-md-5 m-auto">
+      <div id="cover_screen" class="my-2"></div>
+      <div id="music_screen"></div>
+      <h4>Add Music</h4>
+      <input type="text" placeholder="Title" id="m_title" class="form-control mb-2"/>
+      <input type="text" placeholder="Artiste" id="m_artiste" class="form-control mb-2"/>
+      <input type="text" placeholder="Duration" id="m_duration" class="form-control mb-2"/>
+      <label for="">Upload cover image</label>
+      <input type="file" id="m_coverPics" class="form-control mb-2"/>
+      <label for="">Upload Music</label>
+      <input type="file" id="musicFile" class="form-control mb-2"/>
+      <button type="button" id="addMusic" class="btn btn-primary w-100">Add</button>
+    </form>
 
     <script type="module">
-      // Import
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
       import {
         getAuth,
@@ -88,42 +106,6 @@
           });
       });
 
-      // Sending user message
-      sendMessage.addEventListener("click", () => {
-        let userChat = {
-          message: userMsg.value,
-          sender: auth.currentUser.displayName,
-          time: new Date().toLocaleTimeString(),
-        };
-
-        let chatRef = ref(database, `userChat/${chatIndex}`);
-        set(chatRef, userChat);
-        console.log("Message sent");
-        userMsg.value = "";
-      });
-
-      // retrieving all messages
-      let chatRef = ref(database, `userChat`);
-      onValue(chatRef, (snapshot) => {
-        chatScreen.innerHTML = "";
-        let data = snapshot.val();
-        console.log(data);
-        if (data) {
-          chatIndex = data.length;
-          data.forEach((val) => {
-            chatScreen.innerHTML += `
-                    <div>
-                    <h4>${val.message}</h4>
-                    <p>${val.sender}</p>
-                    <i>${val.time}</i>
-                    </div>
-                `;
-          });
-        } else {
-          chatScreen.innerHTML = "No chat available";
-        }
-      });
-
       // cloud Storage
       addMusic.addEventListener("click", () => {
         let cover_file = m_coverPics.files;
@@ -153,11 +135,15 @@
 
         // upload monitoring
         uploadTask.on("state_changed", (snapshot) => {
-          let progress =
-            (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          let progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
           console.log("Upload is " + progress + "% done");
+          music_screen.innerHTML = `
+          <div class="progress" role="progressbar" aria-label="Basic example" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+            <div class="progress-bar" style="width: ${Math.round(progress)}%"></div>
+          </div>
+          `
         });
-
+        music_screen.innerHTML = ''
         // add musicCover to cloud storage
         let musicCoverStrRef = audioRef(storage, `allcover/${cover_file.name}`);
         let uploadCoverTask = uploadBytesResumable(
@@ -167,10 +153,15 @@
 
         // Upload monitoring
         uploadCoverTask.on("state_changed", (snapshot) => {
-          let progress =
-            (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          let progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
           console.log("Upload is " + progress + "% done");
+          cover_screen.innerHTML = `
+          <div class="progress" role="progressbar" aria-label="Basic example" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+            <div class="progress-bar" style="width: ${Math.round(progress)}%"></div>
+          </div>
+          `
         });
+        cover_screen.innerHTML = ''
       });
 
       // retrieve music in database

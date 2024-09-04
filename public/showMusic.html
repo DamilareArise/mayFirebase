@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+
+    <style>
+      nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 50px;
+        border: 1px solid;
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <h3>LOGO</h3>
+      <div>
+        <button id="logoutUser">Logout</button>
+      </div>
+    </nav>
+    <hr />
+    <div id="myScreen"></div>
+    <hr />
+    <div id="show_music"></div>
+    
+
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+      import {
+        getAuth,
+        onAuthStateChanged,
+        signOut,
+      } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+
+      import {
+        getDatabase,
+        ref,
+        onValue,
+      } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+      import { getStorage, ref as audioRef, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyBcsKZvJZcbL2il8x6KZIie39BSglq3GRo",
+        authDomain: "mayfirebase-544bd.firebaseapp.com",
+        projectId: "mayfirebase-544bd",
+        storageBucket: "mayfirebase-544bd.appspot.com",
+        messagingSenderId: "921574315588",
+        appId: "1:921574315588:web:88d1688ebfb44a8b900e11",
+        databaseURL: "https://mayfirebase-544bd-default-rtdb.firebaseio.com",
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth();
+      const database = getDatabase(app);
+      const storage = getStorage()
+
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          console.log("User is logged in");
+          myScreen.innerHTML = `
+                    <p>Welcome ${user.displayName}👍</p>
+                `;
+        } else {
+          console.log("User is not logged in");
+          window.location.href = "signup.html";
+        }
+      });
+
+      logoutUser.addEventListener("click", () => {
+        signOut(auth)
+          .then(() => {
+            console.log("User logged out");
+          })
+          .catch((err) => {
+            console.log(err);
+          });
+      });
+
+      // retrieve music in database
+      let musicRef = ref(database, `allmusics`);
+
+      onValue(musicRef, (snapshot) => {
+        let data = snapshot.val();
+        if (data) {
+          data.map((music)=>{
+            console.log(music)
+            
+            let coverRef = audioRef(storage, `allcover/${music.coverImage}`) 
+            getDownloadURL(coverRef)
+            .then((url)=>{
+                cover_url = url
+            }).catch((err)=>{
+                console.log('Error occured:',err);
+            })
+
+
+            let musicRef = audioRef(storage, `allmusics/${music.musicFile}`)
+            getDownloadURL(musicRef)
+            .then((url)=>{
+                show_music.innerHTML += `
+                <div class="card" style="width: 18rem;">
+                <img src="..." class="card-img-top" alt="...">
+                <div class="card-body">
+                    <h5 class="card-title">${music.title}</h5>
+                    <p class="card-text">${music.artiste}</p>
+                    <p class="card-text">${music.musicFile}</p>
+
+                    <audio src="${url}" controls></audio>
+                </div>
+                </div>
+            `
+
+            }).catch((err)=>{
+                console.log('Error occured:',err);
+            })
+
+ 
+          })
+        }
+      });
+    </script>
+  </body>
+</html>
